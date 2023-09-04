@@ -23,7 +23,7 @@ export default class AppNavigation extends Component {
         screenOptions={{
           headerShown: false,
         }}
-        initialRouteName='liveclass'
+        initialRouteName='loginscreen'
         >
         <Stack.Screen name="onBorading" component={OnBoarding} />
         <Stack.Screen name="pkgScreen" component={PackageScreen} />

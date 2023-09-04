@@ -9,13 +9,103 @@ import {
   TextInput,
 } from 'react-native';
 import React, {Component} from 'react';
+
+import AsyncStorage from '@react-native-async-storage/async-storage';
 export default class LiveClassScreen extends Component {
   constructor(params) {
     super();
     this.state = {
       showOptions: false,
+      loginToken: '',
+      previousClassData: [],
+      btnstyle: 0,
+      setUpcoming: true,
+      setPrevious: false,
+      setNotes: false,
     };
   }
+  componentDidMount() {
+    this.getData();
+    console.log('token', this.state.loginToken);
+  }
+  getData = async () => {
+    try {
+      const value = await AsyncStorage.getItem('loginToken');
+      parseValue = JSON.parse(value);
+      this.setState({loginToken: parseValue});
+      this.getPreviousClassApi();
+      console.log('get value ---> ', value);
+    } catch (e) {
+      console.log('get error -->', e);
+    }
+  };
+  getUpcomingClassApi = () => {
+    var myHeaders = new Headers();
+    myHeaders.append('token', this.state.loginToken);
+
+    var requestOptions = {
+      method: 'GET',
+      headers: myHeaders,
+      redirect: 'follow',
+    };
+
+    fetch(
+      'https://myrankelearningapp-96162-ruby.b96162.dev.eastus.az.svc.builder.cafe//bx_block_scheduling/live_classes/upcoming_classes',
+      requestOptions,
+    )
+      .then(response => response.json())
+      .then(result => console.log('getUpcomingClassApi -->', result))
+      .catch(error => console.log('error', error));
+  };
+  getPreviousClassApi = () => {
+    var myHeaders = new Headers();
+    myHeaders.append('token', this.state.loginToken);
+
+    var requestOptions = {
+      method: 'GET',
+      headers: myHeaders,
+      redirect: 'follow',
+    };
+
+    fetch(
+      'https://myrankelearningapp-96162-ruby.b96162.dev.eastus.az.svc.builder.cafe//bx_block_scheduling/live_classes/previous_classes?subject_id=4',
+      requestOptions,
+    )
+      .then(response => response.json())
+      .then(result => {
+        console.log(
+          'getPreviousClassApi-->',
+          result.data.map(e => e.attributes.subject_name),
+        );
+        this.setState({previousClassData: result.data});
+      })
+      .catch(error => console.log('error', error));
+  };
+  toggleClass = (e, idx) => {
+    console.log('classID-->', idx);
+    if (idx === 0) {
+      this.setState({
+        btnstyle: idx,
+        setUpcoming: true,
+        setPrevious: false,
+        setNotes: false,
+      });
+    } else if (idx === 1) {
+      this.setState({
+        btnstyle: idx,
+        setUpcoming: false,
+        setPrevious: true,
+        setNotes: false,
+      });
+    } else if (idx === 2) {
+      this.setState({
+        btnstyle: idx,
+        setUpcoming: false,
+        setPrevious: false,
+        setNotes: true,
+      });
+    }
+  };
   navBar = () => {
     return (
       <>
@@ -40,29 +130,46 @@ export default class LiveClassScreen extends Component {
           {this.state.showOptions ? (
             <View style={[styles.navbar.navOptionTop]}>
               <View style={[styles.navbar.navOptionInner]}>
-                <TouchableOpacity onPress={() => this.props.navigation.navigate('instruction')} style={[styles.navbar.navOptionBtn]}>
+                <TouchableOpacity
+                  onPress={() => this.props.navigation.navigate('instruction')}
+                  style={[styles.navbar.navOptionBtn]}>
                   <Text>instructions</Text>
                 </TouchableOpacity>
                 <View style={{borderWidth: 0.5, width: '100%'}} />
-                <TouchableOpacity  onPress={() => this.props.navigation.navigate('timing')} style={[styles.navbar.navOptionBtn]}>
+                <TouchableOpacity
+                  onPress={() => this.props.navigation.navigate('timing')}
+                  style={[styles.navbar.navOptionBtn]}>
                   <Text>Class Timings</Text>
                 </TouchableOpacity>
               </View>
             </View>
           ) : null}
-          
         </View>
         <View style={[styles.options.optionsView]}>
-            {['upcomming', 'previous', 'notes', 'materials'].map((e, idx) => (
-              <TouchableOpacity key={idx} style={[styles.options.optionBtn]}>
-                <Text style={[styles.options.optionTxt]}>{e}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          {['upcomming', 'previous', 'notes', 'materials'].map((e, idx) => (
+            <TouchableOpacity
+              key={idx}
+              onPress={() => this.toggleClass(e, idx)}
+              style={
+                this.state.btnstyle === idx
+                  ? [styles.options.optionBtn]
+                  : [styles.options.toggleBtn]
+              }>
+              <Text
+                style={
+                  this.state.btnstyle === idx
+                    ? [styles.options.optionTxt]
+                    : [styles.options.toggleTxt]
+                }>
+                {e}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </>
     );
   };
-  upComingChapter = (e, idx) => {
+  upComingClass = (e, idx) => {
     return (
       <>
         <View style={[styles.chapter.chapterView]}>
@@ -76,7 +183,7 @@ export default class LiveClassScreen extends Component {
             <Text>Chapter : Technologies</Text>
 
             <TouchableOpacity
-              style={[styles.chapter.chapterBtn, {width: '40%'}]}>
+              style={[styles.chapter.chapterBtn, {width: '45%'}]}>
               <Text style={{fontSize: 13, fontWeight: 'bold', color: '#fff'}}>
                 Attand Class
               </Text>
@@ -86,18 +193,22 @@ export default class LiveClassScreen extends Component {
       </>
     );
   };
-  previousChapter = (e, idx) => {
+  previousClass = (e, idx) => {
     return (
       <>
-        <View key={idx} style={[styles.chapter.chapterView]}>
+        <View
+          key={e.attributes.subject_nam}
+          style={[styles.chapter.chapterView]}>
           <Image
             style={{height: 50, width: 50}}
             source={require('../asset/circle.png')}
           />
-          <View style={{marginLeft: 15, width: '85%'}}>
-            <Text style={[styles.chapter.topic]}>Mathmatices</Text>
-            <Text style={[styles.chapter.time]}>22 oct 2020 1:41 PM</Text>
-            <Text>Chapter : Technologies</Text>
+          <View style={{marginLeft: 15, width: '80%'}}>
+            <Text style={[styles.chapter.topic]}>
+              {e.attributes.subject_name}
+            </Text>
+            <Text style={[styles.chapter.time]}>{e.attributes.class_date}</Text>
+            <Text>Chapter : {e.attributes.chapter_name}</Text>
             <View style={{flexDirection: 'row'}}>
               <TouchableOpacity
                 style={[
@@ -109,7 +220,9 @@ export default class LiveClassScreen extends Component {
                   status : Raw video
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => this.props.navigation.navigate('video')} style={[styles.chapter.chapterBtn]}>
+              <TouchableOpacity
+                onPress={() => this.props.navigation.navigate('video')}
+                style={[styles.chapter.chapterBtn]}>
                 <Text style={{fontSize: 13, fontWeight: 'bold', color: '#fff'}}>
                   View Recording
                 </Text>
@@ -123,20 +236,23 @@ export default class LiveClassScreen extends Component {
   notesChapter = (e, idx) => {
     return (
       <>
-        <View style={[styles.chapter.chapterView,]}>
+        <View style={[styles.chapter.chapterView]}>
           <Image
             style={{height: 50, width: 50}}
             source={require('../asset/circle.png')}
           />
           <View style={{marginLeft: 15, width: '85%'}}>
             <Text style={[styles.chapter.topic]}>Mathmatices</Text>
-            
+
             <Text>Chapter : Technologies</Text>
 
             <TouchableOpacity
-              style={[styles.chapter.chapterBtn, {width: '40%',marginBottom:8}]}>
+              style={[
+                styles.chapter.chapterBtn,
+                {width: '40%', marginBottom: 8},
+              ]}>
               <Text style={{fontSize: 13, fontWeight: 'bold', color: '#fff'}}>
-               View Notes
+                View Notes
               </Text>
             </TouchableOpacity>
           </View>
@@ -144,42 +260,57 @@ export default class LiveClassScreen extends Component {
       </>
     );
   };
+  searchComponent = () => {
+    return (
+      <View style={[styles.filter.filterView]}>
+        <View style={[styles.filter.searchView]}>
+          <Image
+            style={[styles.filter.searchImg]}
+            source={require('../asset/search-normal.png')}
+          />
+          <TextInput placeholder="Search" style={[styles.filter.searchIn]} />
+        </View>
+        <TouchableOpacity>
+          <Image
+            style={[styles.filter.filterImg]}
+            source={require('../asset/filter-normal.png')}
+          />
+        </TouchableOpacity>
+        <TouchableOpacity>
+          <Image
+            style={[styles.filter.filterImg]}
+            source={require('../asset/filter-filled.png')}
+          />
+        </TouchableOpacity>
+      </View>
+    );
+  };
   render() {
     return (
       <SafeAreaView>
         <View style={[styles.container]}>
           {this.navBar()}
-          {/* Option's  */}
-        
-          {/* Chapter's  */}
-          <View style={[styles.filter.filterView]}>
-            <View style={[styles.filter.searchView]}>
-              <Image
-                style={[styles.filter.searchImg]}
-                source={require('../asset/search-normal.png')}
-              />
-              <TextInput
-                placeholder="Search"
-                style={[styles.filter.searchIn]}
-              />
-            </View>
-            <TouchableOpacity>
-              <Image
-                style={[styles.filter.filterImg]}
-                source={require('../asset/filter-normal.png')}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity>
-              <Image
-                style={[styles.filter.filterImg]}
-                source={require('../asset/filter-filled.png')}
-              />
-            </TouchableOpacity>
-          </View>
+          {/* {this.searchComponent()} */}
+          {this.state.setUpcoming ? null : this.searchComponent()}
           <ScrollView>
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((e, idx) =>
-              this.previousChapter(e, idx),
-            )}
+            {this.state.setUpcoming
+              ? this.state.previousClassData?.map((e, idx) =>
+                  this.upComingClass(e, idx),
+                )
+              : this.state.setPrevious
+              ? this.state.previousClassData?.map((e, idx) =>
+                  this.previousClass(e, idx),
+                )
+              : this.state.setNotes
+              ? this.state.previousClassData?.map((e, idx) =>
+                  this.notesChapter(e, idx),
+                )
+              : this.state.previousClassData?.map((e, idx) =>
+                  this.upComingClass(e, idx),
+                )}
+            {/* {this.state.previousClassData?.map((e, idx) =>
+              this.notesChapter(e, idx),
+            )} */}
           </ScrollView>
         </View>
       </SafeAreaView>
@@ -207,7 +338,8 @@ const styles = StyleSheet.create({
       borderRadius: 10,
       borderWidth: 1,
       borderColor: 'tomato',
-      alignItems: 'flex-start',backgroundColor:'#fff'
+      alignItems: 'flex-start',
+      backgroundColor: '#fff',
     },
     navOptionBtn: {paddingVertical: 5, paddingHorizontal: 10, marginRight: 30},
   },
@@ -216,7 +348,17 @@ const styles = StyleSheet.create({
       flexDirection: 'row',
       justifyContent: 'space-between',
       marginTop: 20,
-      marginBottom: 20,zIndex:-1
+      marginBottom: 20,
+      zIndex: -1,
+    },
+    toggleBtn: {
+      height: 32,
+      width: 85,
+      borderWidth: 1,
+      borderColor: 'tomato',
+      borderRadius: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     optionBtn: {
       height: 32,
@@ -228,6 +370,12 @@ const styles = StyleSheet.create({
     },
     optionTxt: {
       color: '#fff',
+      textTransform: 'capitalize',
+      fontSize: 13,
+      fontWeight: '500',
+    },
+    toggleTxt: {
+      color: '#000',
       textTransform: 'capitalize',
       fontSize: 13,
       fontWeight: '500',
@@ -252,7 +400,7 @@ const styles = StyleSheet.create({
     },
     chapterBtn: {
       borderRadius: 10,
-      paddingHorizontal: 20,
+      paddingHorizontal: 12,
       marginRight: 10,
       backgroundColor: 'tomato',
       paddingVertical: 10,

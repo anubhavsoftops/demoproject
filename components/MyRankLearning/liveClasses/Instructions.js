@@ -11,13 +11,23 @@ import {
   FlatList,
 } from 'react-native';
 import React, {Component} from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default class Instructions extends Component {
+  constructor(params) {
+    super();
+    this.state = {
+      loginToken: '',
+      setInsruction: [],
+    };
+  }
   navBar = () => {
     return (
       <>
         <View style={[styles.navbar.navView]}>
-          <TouchableOpacity  onPress={() => this.props.navigation.goBack()} style={styles.navbar.navBtn}>
+          <TouchableOpacity
+            onPress={() => this.props.navigation.goBack()}
+            style={styles.navbar.navBtn}>
             <Image
               style={[styles.navbar.navImg]}
               source={require('../asset/back.png')}
@@ -30,6 +40,43 @@ export default class Instructions extends Component {
         </View>
       </>
     );
+  };
+  componentDidMount() {
+    this.getData();
+  }
+  getData = async () => {
+    try {
+      const value = await AsyncStorage.getItem('loginToken');
+      parseValue = JSON.parse(value);
+      this.setState({loginToken: parseValue});
+      this.getInstructionApi();
+      return parseValue;
+      console.log('get value ---> ', value);
+    } catch (e) {
+      console.log('get error -->', e);
+    }
+  };
+  getInstructionApi = () => {
+    var myHeaders = new Headers();
+    myHeaders.append('token', this.state.loginToken);
+
+    var requestOptions = {
+      method: 'GET',
+      headers: myHeaders,
+      redirect: 'follow',
+    };
+
+    fetch(
+      'https://myrankelearningapp-96162-ruby.b96162.dev.eastus.az.svc.builder.cafe//bx_block_scheduling/live_classes/instructions',
+      requestOptions,
+    )
+      .then(response => response.json())
+      .then(result => {
+        console.log('getInstructionApi-->', result);
+        this.setState({setInsruction: result.data.map(e => e.attributes)});
+        console.log(this.state.setInsruction);
+      })
+      .catch(error => console.log('error', error));
   };
   render() {
     return (
@@ -48,7 +95,7 @@ export default class Instructions extends Component {
               marginTop: 30,
             }}>
             <FlatList
-              data={[1, 2, 3, 4, 5, 6]}
+              data={this.state.setInsruction}
               renderItem={({item}) => (
                 <View
                   style={{
@@ -66,9 +113,8 @@ export default class Instructions extends Component {
                     }}
                   />
                   <Text
-                    style={{fontSize: 16, fontWeight: '600', marginLeft: 20}}>
-                    Lorem ipsum dolor, sit amet consectetur adipisicing elit.
-                    Libero
+                    style={{fontSize: 16, fontWeight: '600', marginLeft: 20,width:'90%'}}>
+                    {item.content}
                   </Text>
                 </View>
               )}

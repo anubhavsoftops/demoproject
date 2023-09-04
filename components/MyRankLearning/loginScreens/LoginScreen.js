@@ -13,6 +13,7 @@ import {
   Alert,
 } from 'react-native';
 import React, {Component} from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default class LoginScreen extends Component {
   constructor() {
@@ -26,32 +27,37 @@ export default class LoginScreen extends Component {
       rankPassword: '',
       staticToken:
         'eyJhbGciOiJIUzUxMiJ9.eyJpZCI6MTA2MCwiZXhwIjoxNjkyOTY5MjM5fQ.X2Zz3_XmA8GfgeWFB5a2iCAvBQUKKDQ0zEDTuVxGNag5QlU4BE0EMM9Z-boQF1JtVegKYGYaXgFWDkKqx4uyeg',
-      staticRankId: 'MR22JEE1009',
-      staticPass: 'Sumit@123456789',
+      staticRankId: 'MR22ENG1006',
+      staticPass: 'Password@12345',
       staticNumber: '8962422123',
     };
   }
-  hendleSubmit = () => {
-    // let raw = JSON.stringify({
-    //   "data": {
-    //     "attributes": {
-    //       "full_phone_number": "918871379123"
-    //     }
-    //   }
-    // });
+  componentDidMount() {
+    this.getData();
+  }
+  storeData = async value => {
+    // console.log('value-->', typeof value);
+    let valueStr = JSON.stringify(value);
+    try {
+      await AsyncStorage.setItem('loginToken', valueStr);
 
-    // let url =
-    //   'https://myrankelearningapp-96162-ruby.b96162.dev.eastus.az.svc.builder.cafe/send_sms_otp';
-    // fetch(url, {
-    //   method: 'POST',
-    //   headers: {
-    //     'Content-Type': 'apilication/json',
-    //   },
-    //   body: raw,
-    // })
-    //   .then(res => res.json())
-    //   .then(data => console.log('---- >', data))
-    //   .catch(err => console.log(err));
+      this.getData('loginToken');
+    } catch (e) {
+      // saving error
+      console.log('setdata error-->', e);
+    }
+  };
+  getData = async () => {
+    try {
+      const value = await AsyncStorage.getItem('loginToken');
+      parseValue = JSON.parse(value);
+      this.setState({userData: parseValue});
+      console.log('get value ---> ', value);
+    } catch (e) {
+      console.log('get error -->', e);
+    }
+  };
+  hendleSubmit = () => {
     let myHeaders = new Headers();
     myHeaders.append('Content-Type', 'application/json');
 
@@ -84,15 +90,11 @@ export default class LoginScreen extends Component {
     let data = this.state.loginByMyrank
       ? {myrank_id: this.state.staticRankId, password: this.state.staticPass}
       : {phone_number: this.state.staticNumber};
-    console.log(data);
+
     let raw = JSON.stringify({
       data: {
         type: 'sms_account',
-        attributes:data 
-        // {
-        //   myrank_id: this.state.staticRankId,
-        //   password: this.state.staticPass,
-        // },
+        attributes: data,
       },
     });
 
@@ -108,13 +110,18 @@ export default class LoginScreen extends Component {
       requestOptions,
     )
       .then(response => response.json())
-      .then(result => {console.log('hendleLoginWithIdApi-- >',result)
-      if(result?.data?.attributes?.pin){
-        alert(result?.data?.attributes?.pin)
-        console.log(result.meta.token);
-        this.props.navigation.navigate('otpverify',{OTPToken:result.meta.token,number:this.state.staticNumber})
-      }
-    })
+      .then(result => {
+        console.log('hendleLoginWithIdApi-- >', result.meta.token);
+        this.storeData(result.meta.token);
+        if (result?.data?.attributes?.pin) {
+          alert(result?.data?.attributes?.pin);
+          console.log(result.meta.token);
+          this.props.navigation.navigate('otpverify', {
+            OTPToken: result.meta.token,
+            number: this.state.staticNumber,
+          });
+        }
+      })
       .catch(error => console.log('error', error));
   };
   render() {
@@ -235,16 +242,14 @@ export default class LoginScreen extends Component {
                 </View>
               </>
             ) : null}
-              <TouchableOpacity
-                  style={[styles.loginContainer.btnView]}
-                  onPress={() => {
-                    this.hendleLoginWithIdApi();
-                    // this.props.navigation.navigate('loginsuccess')
-                  }}>
-                  <Text style={[styles.loginContainer.btnTxt]}>
-                    Log in 
-                  </Text>
-                </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.loginContainer.btnView]}
+              onPress={() => {
+                this.hendleLoginWithIdApi();
+                // this.props.navigation.navigate('loginsuccess')
+              }}>
+              <Text style={[styles.loginContainer.btnTxt]}>Log in</Text>
+            </TouchableOpacity>
             {this.state.loginByMyrank ? (
               <TouchableOpacity
                 onPress={() => this.props.navigation.navigate('forget')}>
